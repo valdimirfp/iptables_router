@@ -29,9 +29,6 @@ iptables -A INPUT -m state --state INVALID -j DROP
 iptables -A FORWARD -m state --state INVALID -j DROP
 iptables -A OUTPUT -m state --state INVALID -j DROP
 
-# Kali full access
-iptables -A OUTPUT -p tcp -d 172.16.11.104 -j ACCEPT
-
 # Разрешаем DNS
 #iptables -A INPUT -p udp --dport 53 -j ACCEPT
 iptables -A OUTPUT -p udp --sport 53 --dport 1024:65535 -j ACCEPT
@@ -59,10 +56,10 @@ iptables -A INPUT -p tcp -s 0.0.0.0/0 --dport=81 -j ACCEPT
 #iptables -A INPUT -p tcp -s 172.16.1.0/24  -j ACCEPT
 
 # разрешаем внутреннем хостам выходи на ружу
-iptables -A FORWARD -i enp0s8 -p tcp --match multiport --dport 443,80,22 -j ACCEPT
-#iptables -A FORWARD -i enp0s8 -p tcp -j ACCEPT
+#iptables -A FORWARD -i enp0s8 -p tcp --match multiport --dport 443,80,22 -j ACCEPT
+iptables -A FORWARD -i enp0s8 -p tcp -j ACCEPT
 
-iptables -A FORWARD -i enp0s8 -s 172.16.11.0/24 -p tcp -j LOG --log-prefix '[iptables]-DROP ' --log-level 1
+iptables -A FORWARD -i enp0s8 -s 172.16.11.0/24 -p tcp -j LOG --log-prefix "IPtablesDROP - " --log-level 1
 iptables -A FORWARD -i enp0s8 -s 172.16.11.0/24 -p tcp -j DROP
 
 #Разрешаем исходящие соединения из локальной сети к интернет-хостам
@@ -71,56 +68,42 @@ iptables -A FORWARD -m conntrack --ctstate NEW -i enp0s8 -s 172.16.11.0/24 -j AC
 #пробросим NAT
 iptables -t nat -A POSTROUTING -o enp0s3 -j MASQUERADE
 
-#проброс внутрь
+#проброс внутрь SSH
+# k8s
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2443 -j DNAT --to-destination 172.16.11.1:6443
+iptables -A FORWARD -p tcp -d 172.16.11.1 --dport 6443 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
-# HaProxy01
-## http
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 8380 -j DNAT --to-destination 172.16.11.71:80
-iptables -A FORWARD -p tcp -d 172.16.11.71 --dport 80 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 8081 -j DNAT --to-destination 172.16.11.1:81
+iptables -A FORWARD -p tcp -d 172.16.11.1 --dport 81 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
-## HaProxy haproxy_stats
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 1011 -j DNAT --to-destination 172.16.11.71:1001
-iptables -A FORWARD -p tcp -d 172.16.11.71 --dport 1001 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 31455 -j DNAT --to-destination 172.16.11.2:32455
+iptables -A FORWARD -p tcp -d 172.16.11.2 --dport 32455 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
-## ssh
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2222 -j DNAT --to-destination 172.16.11.71:22
-iptables -A FORWARD -p tcp -d 172.16.11.71 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+#Docker-1
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2201 -j DNAT --to-destination 172.16.11.1:22
+iptables -A FORWARD -p tcp -d 172.16.11.1 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
-#Kibana
-## http
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 8180 -j DNAT --to-destination 172.16.11.110:80
-iptables -A FORWARD -p tcp -d 172.16.11.110 --dport 80 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+#Docker-2
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2202 -j DNAT --to-destination 172.16.11.2:22
+iptables -A FORWARD -p tcp -d 172.16.11.2 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
-## https
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2443 -j DNAT --to-destination 172.16.11.110:443
-iptables -A FORWARD -p tcp -d 172.16.11.110 --dport 443 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+#Docker-3
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2203 -j DNAT --to-destination 172.16.11.3:22
+iptables -A FORWARD -p tcp -d 172.16.11.3 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
-## ssh
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2223 -j DNAT --to-destination 172.16.11.110:22
-iptables -A FORWARD -p tcp -d 172.16.11.110 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+#RDP
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2389 -j DNAT --to-destination 172.16.11.102:3389
+iptables -A FORWARD -p tcp -d 172.16.11.102 --dport 3389 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2390 -j DNAT --to-destination 172.16.11.106:3389
+iptables -A FORWARD -p tcp -d 172.16.11.106 --dport 3389 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
-#WEB-01
-## web
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 8480 -j DNAT --to-destination 172.16.11.81:80
-iptables -A FORWARD -p tcp -d 172.16.11.81 --dport 80 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+#Kali_11_12
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2204 -j DNAT --to-destination 172.16.11.104:22
+iptables -A FORWARD -p tcp -d 172.16.11.104 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
-## web_https
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 1443 -j DNAT --to-destination 172.16.11.81:443
-iptables -A FORWARD -p tcp -d 172.16.11.81 --dport 443 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-
-## ssh
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2422 -j DNAT --to-destination 172.16.11.81:22
-iptables -A FORWARD -p tcp -d 172.16.11.81 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-
-#WEB-02
-## web
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 8280 -j DNAT --to-destination 172.16.11.82:80
-iptables -A FORWARD -p tcp -d 172.16.11.82 --dport 80 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-
-## ssh
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2122 -j DNAT --to-destination 172.16.11.82:22
-iptables -A FORWARD -p tcp -d 172.16.11.82 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 8080 -j DNAT --to-destination 172.16.11.200:8888
+iptables -A FORWARD -p tcp -d 172.16.11.200 --dport 8888 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
 #пишем в лог все дропы
 iptables -N LOGGING
@@ -134,6 +117,6 @@ iptables -A FORWARD -j REJECT
 
 
 # save config
-#iptables-save > /etc/iptables.rules
-sudo iptables-save > /etc/iptables.rules.v4
+iptables-save > /etc/iptables.rules
+#sudo /sbin/iptables-save > /etc/iptables/rules.v4
 echo "iptables rules complete"
