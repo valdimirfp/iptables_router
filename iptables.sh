@@ -99,7 +99,6 @@ iptables -A FORWARD -p tcp -d 172.16.11.110 --dport 443 -m state --state NEW,EST
 iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2223 -j DNAT --to-destination 172.16.11.110:22
 iptables -A FORWARD -p tcp -d 172.16.11.110 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
-
 #WEB-01
 ## web
 iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 8480 -j DNAT --to-destination 172.16.11.81:80
@@ -118,6 +117,10 @@ iptables -A FORWARD -p tcp -d 172.16.11.81 --dport 22 -m state --state NEW,ESTAB
 iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 8280 -j DNAT --to-destination 172.16.11.82:80
 iptables -A FORWARD -p tcp -d 172.16.11.82 --dport 80 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
+## web_https
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 3443 -j DNAT --to-destination 172.16.11.82:443
+iptables -A FORWARD -p tcp -d 172.16.11.82 --dport 443 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
 ## ssh
 iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2122 -j DNAT --to-destination 172.16.11.82:22
 iptables -A FORWARD -p tcp -d 172.16.11.82 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
@@ -126,6 +129,12 @@ iptables -A FORWARD -p tcp -d 172.16.11.82 --dport 22 -m state --state NEW,ESTAB
 ## ssh
 iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2225 -j DNAT --to-destination 172.16.11.111:22
 iptables -A FORWARD -p tcp -d 172.16.11.111 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+#FreeIPA
+## ssh
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2226 -j DNAT --to-destination 172.16.11.1:22
+iptables -A FORWARD -p tcp -d 172.16.11.1 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
 
 #пишем в лог все дропы
 iptables -N LOGGING
