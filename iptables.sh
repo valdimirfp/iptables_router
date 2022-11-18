@@ -124,7 +124,7 @@ iptables -A FORWARD -p tcp -d 172.16.11.82 --dport 22 -m state --state NEW,ESTAB
 
 #UBNTWS
 ## ssh
-iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2225 -j DNAT --to-destination 172.16.11.82:111
+iptables -t nat -A PREROUTING -p tcp -s 0.0.0.0/0 --dport 2225 -j DNAT --to-destination 172.16.11.111:22
 iptables -A FORWARD -p tcp -d 172.16.11.111 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
 #пишем в лог все дропы
